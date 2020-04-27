@@ -1,0 +1,32 @@
+# apr/27/2020 23:30:16 by RouterOS 6.46.4
+# software id = W2PG-W6T9
+#
+# model = CRS328-24P-4S+
+# serial number = A3A50AA0F7E3
+/interface bridge
+add name=bridge1 pvid=300 vlan-filtering=yes
+/interface wireless security-profiles
+set [ find default=yes ] supplicant-identity=MikroTik
+/ip hotspot profile
+set [ find default=yes ] html-directory=flash/hotspot
+/interface bridge port
+add bridge=bridge1 interface=ether1
+add bridge=bridge1 interface=ether23 pvid=300
+add bridge=bridge1 interface=ether2 pvid=300
+add bridge=bridge1 interface=ether3 pvid=300
+add bridge=bridge1 interface=ether4 pvid=300
+add bridge=bridge1 interface=ether5 pvid=300
+add bridge=bridge1 interface=ether6 pvid=300
+/interface bridge vlan
+add bridge=bridge1 tagged=ether1 vlan-ids=100
+add bridge=bridge1 tagged=ether1 vlan-ids=200
+add bridge=bridge1 tagged=ether1 untagged=ether2,ether3,ether4,ether5,ether6,ether23 vlan-ids=300
+add bridge=bridge1 tagged=ether1 vlan-ids=400
+/ip address
+add address=192.168.99.2/24 interface=bridge1 network=192.168.99.0
+/ip dhcp-client
+add comment=defconf disabled=no
+/system clock
+set time-zone-name=Europe/Zurich
+/system routerboard settings
+set boot-os=router-os

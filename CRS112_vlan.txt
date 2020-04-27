@@ -1,0 +1,29 @@
+# jan/02/1970 00:30:44 by RouterOS 6.46.5
+# software id = CQYK-5ALX
+#
+# model = CRS112-8P-4S
+# serial number = 9B2408645B03
+/interface bridge
+add name=bridge1
+/interface vlan
+add interface=bridge1 name=vlan.300 vlan-id=300
+/interface ethernet switch
+set drop-if-invalid-or-src-port-not-member-of-vlan-on-ports=ether1,ether2,ether3,ether4
+/interface bridge port
+add bridge=bridge1 interface=ether1
+add bridge=bridge1 interface=ether2
+add bridge=bridge1 interface=ether3
+add bridge=bridge1 interface=ether4
+/interface ethernet switch egress-vlan-tag
+add tagged-ports=ether1 vlan-id=100
+add tagged-ports=ether1 vlan-id=200
+add tagged-ports=switch1-cpu,ether1 vlan-id=300
+add tagged-ports=ether1 vlan-id=400
+/interface ethernet switch ingress-vlan-translation
+add customer-vid=0 new-customer-vid=300 ports=ether2,ether3,ether4
+/interface ethernet switch vlan
+add ports=switch1-cpu,ether1,ether2,ether3,ether4 vlan-id=300
+/ip address
+add address=192.168.99.1/24 interface=vlan.300 network=192.168.99.0
+/system routerboard settings
+set auto-upgrade=yes
