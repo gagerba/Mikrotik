@@ -123,3 +123,4 @@ set enabled=yes
 
 /system ntp client servers
 add address=ch.pool.ntp.org
+
