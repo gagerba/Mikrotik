@@ -1,0 +1,125 @@
+/interface bridge
+add name=bridge1 protocol-mode=none
+
+/interface ethernet
+set [ find default-name=sfp-sfpplus1 ] auto-negotiation=no speed=1Gbps
+
+/interface bonding
+add mode=802.3ad name=bonding1 slaves=ether15,ether16
+
+/interface wireless security-profiles
+set [ find default=yes ] supplicant-identity=MikroTik
+
+/port
+set 0 name=serial0
+set 1 name=serial1
+
+/routing ospf instance
+add disabled=no in-filter-chain=ospf-in name=ospf-instance-1 out-filter-chain=ospf-out redistribute="" router-id=172.16.1.2
+
+/routing ospf area
+add disabled=no instance=ospf-instance-1 name=ospf-area-1
+
+/routing bgp template
+set default disabled=yes output.network=bgp_as174 routing-table=main
+
+/snmp community
+set [ find default=yes ] disabled=yes
+add addresses=1.2.3.4/32 name=pripriprivate
+
+/interface bridge port
+add bridge=bridge1 ingress-filtering=no interface=sfp-sfpplus1
+
+/ip settings
+set max-neighbor-entries=8192
+
+/ipv6 settings
+set max-neighbor-entries=8192
+
+/interface ovpn-server server
+set auth=sha1,md5
+
+/ip address
+add address=192.168.88.2/24 comment=defconf interface=bonding1 network=192.168.88.0
+add address=150.10.48.122/29 interface=bridge1 network=150.10.48.120
+add address=155.119.61.1/24 interface=bridge1 network=155.119.61.0
+add address=172.16.1.2/30 interface=bonding1 network=172.16.1.0
+add address=155.119.60.250/30 interface=bridge1 network=155.119.60.248
+
+/ip dns
+set servers=9.9.9.9,1.1.1.1
+
+/ip firewall address-list
+add address=155.119.61.0/24 comment="Test subnet" list=bgp_as174
+add address=0.0.0.0/8 list=bogons_ipv4
+add address=10.0.0.0/8 list=bogons_ipv4
+add address=100.64.0.0/10 list=bogons_ipv4
+add address=127.0.0.0/8 list=bogons_ipv4
+add address=169.254.0.0/16 list=bogons_ipv4
+add address=172.16.0.0/12 list=bogons_ipv4
+add address=192.0.0.0/24 list=bogons_ipv4
+add address=192.0.2.0/24 list=bogons_ipv4
+add address=192.168.0.0/16 list=bogons_ipv4
+add address=198.18.0.0/15 list=bogons_ipv4
+add address=198.51.100.0/24 list=bogons_ipv4
+add address=203.0.113.0/24 list=bogons_ipv4
+add address=224.0.0.0/3 list=bogons_ipv4
+add address=172.16.1.0/30 list=OSPF-IN
+add address=173.127.102.120/30 list=OSPF-IN
+add address=172.16.1.0/30 list=OSPF-OUT
+add address=150.10.48.120/29 list=OSPF-OUT
+add address=155.119.60.248/30 list=OSPF-OUT
+
+/ip firewall filter
+add action=fasttrack-connection chain=forward connection-state=established,related hw-offload=yes
+add action=accept chain=forward connection-state=established,related disabled=yes
+
+/ip route
+add disabled=no dst-address=0.0.0.0/0 gateway=150.10.48.121 routing-table=main suppress-hw-offload=no
+
+/ip service
+set telnet disabled=yes
+set ftp disabled=yes
+set www disabled=yes
+set ssh address=1.2.3.4/32,2.3.4.5/32,5.6.7.8/32
+set api disabled=yes
+set winbox address=1.2.3.4/32,2.3.4.5/32,5.6.7.8/32
+set api-ssl disabled=yes
+
+/routing bgp connection
+add address-families=ip as=666 comment="Cogent Internet AS174" disabled=no input.affinity=main .filter=cogent_inbound local.address=150.10.48.122 .role=ebgp-customer name=COGENT_TRANSIT output.affinity=main .network=bgp_as174 remote.address=150.10.48.121/32 .as=174 router-id=150.10.48.122 routing-table=main
+add address-families=ip as=666 comment="Internal session between routers" disabled=no input.filter=ibgp-inbound local.address=172.16.1.2 .role=ibgp name="RTINT102P03 iBGP" nexthop-choice=default output.network=bgp_as174 remote.address=172.16.1.1/32 router-id=150.10.48.122 routing-table=main
+
+/routing filter rule
+add chain=cogent_inbound disabled=no rule="if (dst in bogons_ipv4) { reject }"
+add chain=cogent_inbound disabled=no rule="if (dst-len in 25-32) {reject}"
+add chain=cogent_inbound disabled=no rule="if (bgp-as-path ^174) {set bgp-local-pref 120; accept} else {reject}"
+
+add chain=ibgp-inbound disabled=no rule="if ( protocol bgp ) { accept } else { reject }"
+add chain=ibgp-inbound disabled=no rule="if (dst in bogons_ipv4) { reject }"
+add chain=ibgp-inbound disabled=no rule="if (dst-len in 25-32) {reject}"
+add chain=ibgp-inbound disabled=no rule="if (dst==155.119.61.0/24) {reject} else {set bgp-local-pref 120; accept}"
+
+add chain=ospf-in disabled=no rule="if (dst in OSPF-IN) { accept } else { reject }"
+add chain=ospf-out disabled=no rule="if ( protocol ospf ) { accept } else { reject }"
+add chain=ospf-out disabled=no rule="if (dst in OSPF-OUT) { accept } else { reject }"
+
+/routing ospf interface-template
+add area=ospf-area-1 disabled=no interfaces=bonding1 networks=172.16.1.0/30
+add area=ospf-area-1 disabled=no interfaces=bridge1 networks=150.10.48.122/29 passive
+add area=ospf-area-1 disabled=no interfaces=bridge1 networks=155.119.60.254/32 passive
+
+/snmp
+set contact="Greg" enabled=yes location="Switzerland" trap-community=exampleofcommunity
+
+/system clock
+set time-zone-name=Europe/Zurich
+
+/system identity
+set name=MYROUTER1
+
+/system ntp client
+set enabled=yes
+
+/system ntp client servers
+add address=ch.pool.ntp.org
